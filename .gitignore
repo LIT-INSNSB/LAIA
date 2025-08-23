@@ -1,0 +1,21 @@
+# Modelos pesados
+*.h5
+
+# Videos
+*.mp4
+
+# Archivos temporales
+*.log
+*.tmp
+
+# Archivos comprimidos
+*.zip
+*.rar
+*.7z
+*.tar
+*.gz
+
+# Carpetas comunes
+__pycache__/
+.vscode/
+.idea/
