@@ -200,10 +200,23 @@ def consensus_for_video(tracks, map7to0):
     mov_cons = [-1] * T
     votes_hist = [[0]*8 for _ in range(T)]
     for f in range(T):
+        # iw_votes = [int(t[f]["is_washing"]) for t in tracks]
+        # iw = majority_vote_int(iw_votes, valid_set=set([0,1]))
+        # isw_cons[f] = iw
+        # # votos de movimiento solo donde is_washing=1
         iw_votes = [int(t[f]["is_washing"]) for t in tracks]
-        iw = majority_vote_int(iw_votes, valid_set=set([0,1]))
-        isw_cons[f] = iw
-        # votos de movimiento solo donde is_washing=1
+        valid = [v for v in iw_votes if v in (0,1)]
+        if not valid:
+            iw = -1
+        else:
+            s = sum(valid)
+            if s == len(valid):
+                iw = 2 # unanimidad : todos dijeron que es washing
+            elif s == 0:
+                iw = 0 # unanimidad : todos dijeron que no es washing
+            else:
+                iw = 1 # al menos un anotador dijo que es washing
+        isw_cons[f] = iw    
         mvotes = []
         for t in tracks:
             if int(t[f]["is_washing"]) == 1:
@@ -214,7 +227,7 @@ def consensus_for_video(tracks, map7to0):
                     mvotes.append(cd)
         for cd in mvotes:
             votes_hist[f][cd] += 1
-        if iw == 1:
+        if iw == 2:
             mv = majority_vote_int(mvotes, valid_set=set(range(8)))
         else:
             mv = -1
