@@ -969,7 +969,7 @@ def main():
     # Wandb parameters
     parser.add_argument('--use_wandb', action='store_true',
                        help='Use Weights & Biases for logging')
-    parser.add_argument('--project_name', type=str, default='laia-net-enhanced',
+    parser.add_argument('--project_name', type=str, default='LAIA-net',
                        help='Wandb project name')
     parser.add_argument('--run_name', type=str, default=None,
                        help='Wandb run name')
@@ -1005,6 +1005,7 @@ def main():
             try:
                 wandb.init(
                     project=args.project_name,
+                    entity='c-vasquezr',
                     name=args.run_name,
                     config=vars(args),
                     tags=['class-imbalance', 'enhanced-stgcn']
