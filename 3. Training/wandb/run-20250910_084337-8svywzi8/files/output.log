@@ -1,0 +1,306 @@
+2025-09-10 08:43:38,079 - INFO - Wandb initialized successfully
+2025-09-10 08:43:38,079 - INFO - Loading and preparing data...
+2025-09-10 08:43:38,079 - INFO - Loading data from ../prepared/h5/PSKUS-v2.h5
+2025-09-10 08:43:39,310 - INFO - Found 3185 videos
+2025-09-10 08:43:39,311 - INFO - Datasets: ['DataSet1', 'DataSet10', 'DataSet11', 'DataSet2', 'DataSet3', 'DataSet4', 'DataSet5', 'DataSet6', 'DataSet7', 'DataSet8', 'DataSet9']
+2025-09-10 08:43:39,312 - INFO - Test datasets: ['DataSet9']
+2025-09-10 08:43:39,314 - INFO - Split: Train=2436, Val=535, Test=214
+2025-09-10 08:43:39,314 - INFO - Creating window indices...
+2025-09-10 08:45:45,503 - INFO - Windows: Train=116650, Val=26725, Test=7810
+2025-09-10 08:45:45,512 - INFO - Train class distribution: {0: 99475, 1: 2435, 3: 1571, 4: 2679, 2: 4991, 6: 2850, 5: 2649}
+2025-09-10 08:45:45,520 - INFO - Train counts: {0: 99475, 1: 2435, 3: 1571, 4: 2679, 2: 4991, 6: 2850, 5: 2649} | bg%=85.3
+2025-09-10 08:45:45,522 - INFO - Val counts: {3: 350, 0: 23257, 2: 979, 4: 634, 5: 447, 6: 581, 1: 477} | bg%=87.0
+2025-09-10 08:45:45,522 - INFO - Test counts: {0: 6285, 1: 283, 2: 483, 3: 225, 4: 161, 6: 221, 5: 152} | bg%=80.5
+2025-09-10 08:45:45,525 - INFO - Val original: 23257 bg, 3468 positive
+2025-09-10 08:45:45,526 - INFO - Val balanced: 1486 bg, 3468 pos (bg_ratio=0.30)
+2025-09-10 08:45:45,526 - INFO - 🚀 INICIANDO ENTRENAMIENTO DE 2 ETAPAS
+2025-09-10 08:45:45,526 - INFO - === INICIANDO ETAPA 1: DETECTOR BINARIO ===
+2025-09-10 08:45:45,545 - INFO - Binary classification - pos_weight: 5.79
+/root/repositories/LAIA/3. Training/train.py:997: FutureWarning: `torch.cuda.amp.GradScaler(args...)` is deprecated. Please use `torch.amp.GradScaler('cuda', args...)` instead.
+  scaler = torch.cuda.amp.GradScaler(enabled=(enabled_amp and (amp_dtype == torch.float16)))
+2025-09-10 08:45:51,778 - INFO - Binary Epoch 1 [0/1823] Loss: 1.7378
+2025-09-10 08:46:51,686 - INFO - Binary Epoch 1 [100/1823] Loss: 0.6206
+2025-09-10 08:47:51,586 - INFO - Binary Epoch 1 [200/1823] Loss: 0.9314
+2025-09-10 08:48:51,489 - INFO - Binary Epoch 1 [300/1823] Loss: 0.8777
+2025-09-10 08:49:51,397 - INFO - Binary Epoch 1 [400/1823] Loss: 0.7048
+2025-09-10 08:50:51,269 - INFO - Binary Epoch 1 [500/1823] Loss: 0.8735
+2025-09-10 08:51:51,142 - INFO - Binary Epoch 1 [600/1823] Loss: 1.1535
+2025-09-10 08:52:51,005 - INFO - Binary Epoch 1 [700/1823] Loss: 0.6787
+2025-09-10 08:53:50,892 - INFO - Binary Epoch 1 [800/1823] Loss: 0.6509
+2025-09-10 08:54:50,713 - INFO - Binary Epoch 1 [900/1823] Loss: 0.3626
+2025-09-10 08:55:50,608 - INFO - Binary Epoch 1 [1000/1823] Loss: 0.5903
+2025-09-10 08:56:50,448 - INFO - Binary Epoch 1 [1100/1823] Loss: 0.3780
+2025-09-10 08:57:50,283 - INFO - Binary Epoch 1 [1200/1823] Loss: 0.6036
+2025-09-10 08:58:50,161 - INFO - Binary Epoch 1 [1300/1823] Loss: 0.9774
+2025-09-10 08:59:50,050 - INFO - Binary Epoch 1 [1400/1823] Loss: 0.6378
+2025-09-10 09:00:49,896 - INFO - Binary Epoch 1 [1500/1823] Loss: 0.4936
+2025-09-10 09:01:49,790 - INFO - Binary Epoch 1 [1600/1823] Loss: 0.6163
+2025-09-10 09:02:49,668 - INFO - Binary Epoch 1 [1700/1823] Loss: 0.7124
+2025-09-10 09:03:49,568 - INFO - Binary Epoch 1 [1800/1823] Loss: 0.7575
+2025-09-10 09:04:25,874 - INFO - Optimal threshold: 0.100 (f1=0.874)
+2025-09-10 09:04:25,875 - INFO - Binary Epoch 1: train_loss=0.720, train_acc=0.854, val_f1=0.874, threshold=0.100
+2025-09-10 09:04:25,905 - INFO - ✅ Nuevo mejor modelo binario: F1=0.874
+2025-09-10 09:04:26,787 - INFO - Binary Epoch 2 [0/1823] Loss: 0.7974
+2025-09-10 09:05:26,519 - INFO - Binary Epoch 2 [100/1823] Loss: 0.6895
+2025-09-10 09:06:26,548 - INFO - Binary Epoch 2 [200/1823] Loss: 1.0076
+2025-09-10 09:07:26,427 - INFO - Binary Epoch 2 [300/1823] Loss: 0.5043
+2025-09-10 09:08:26,273 - INFO - Binary Epoch 2 [400/1823] Loss: 0.9507
+2025-09-10 09:09:26,081 - INFO - Binary Epoch 2 [500/1823] Loss: 0.5821
+2025-09-10 09:10:25,937 - INFO - Binary Epoch 2 [600/1823] Loss: 0.4796
+2025-09-10 09:11:25,797 - INFO - Binary Epoch 2 [700/1823] Loss: 0.5511
+2025-09-10 09:12:25,646 - INFO - Binary Epoch 2 [800/1823] Loss: 1.2800
+2025-09-10 09:13:25,503 - INFO - Binary Epoch 2 [900/1823] Loss: 0.8684
+2025-09-10 09:14:25,341 - INFO - Binary Epoch 2 [1000/1823] Loss: 0.3877
+2025-09-10 09:15:25,190 - INFO - Binary Epoch 2 [1100/1823] Loss: 0.2301
+2025-09-10 09:16:25,013 - INFO - Binary Epoch 2 [1200/1823] Loss: 0.2283
+2025-09-10 09:17:24,858 - INFO - Binary Epoch 2 [1300/1823] Loss: 0.7402
+2025-09-10 09:18:24,646 - INFO - Binary Epoch 2 [1400/1823] Loss: 0.4381
+2025-09-10 09:19:24,507 - INFO - Binary Epoch 2 [1500/1823] Loss: 0.6546
+2025-09-10 09:20:24,328 - INFO - Binary Epoch 2 [1600/1823] Loss: 0.3019
+2025-09-10 09:21:24,206 - INFO - Binary Epoch 2 [1700/1823] Loss: 0.9035
+2025-09-10 09:22:24,035 - INFO - Binary Epoch 2 [1800/1823] Loss: 0.5742
+2025-09-10 09:22:54,693 - INFO - Optimal threshold: 0.100 (f1=0.872)
+2025-09-10 09:22:54,694 - INFO - Binary Epoch 2: train_loss=0.584, train_acc=0.892, val_f1=0.872, threshold=0.100
+2025-09-10 09:22:55,566 - INFO - Binary Epoch 3 [0/1823] Loss: 0.2872
+2025-09-10 09:23:55,414 - INFO - Binary Epoch 3 [100/1823] Loss: 0.7127
+2025-09-10 09:24:55,258 - INFO - Binary Epoch 3 [200/1823] Loss: 0.3945
+2025-09-10 09:25:55,116 - INFO - Binary Epoch 3 [300/1823] Loss: 0.5781
+2025-09-10 09:26:54,924 - INFO - Binary Epoch 3 [400/1823] Loss: 0.3763
+2025-09-10 09:27:54,750 - INFO - Binary Epoch 3 [500/1823] Loss: 0.3685
+2025-09-10 09:28:54,579 - INFO - Binary Epoch 3 [600/1823] Loss: 0.4304
+2025-09-10 09:29:54,387 - INFO - Binary Epoch 3 [700/1823] Loss: 0.4614
+2025-09-10 09:30:54,186 - INFO - Binary Epoch 3 [800/1823] Loss: 0.5559
+2025-09-10 09:31:54,037 - INFO - Binary Epoch 3 [900/1823] Loss: 0.6099
+2025-09-10 09:32:53,841 - INFO - Binary Epoch 3 [1000/1823] Loss: 0.6857
+2025-09-10 09:33:53,630 - INFO - Binary Epoch 3 [1100/1823] Loss: 0.6254
+2025-09-10 09:34:53,469 - INFO - Binary Epoch 3 [1200/1823] Loss: 0.3439
+2025-09-10 09:35:53,262 - INFO - Binary Epoch 3 [1300/1823] Loss: 0.3727
+2025-09-10 09:36:53,038 - INFO - Binary Epoch 3 [1400/1823] Loss: 0.3261
+2025-09-10 09:37:52,857 - INFO - Binary Epoch 3 [1500/1823] Loss: 0.5474
+2025-09-10 09:38:52,632 - INFO - Binary Epoch 3 [1600/1823] Loss: 0.2279
+2025-09-10 09:39:52,398 - INFO - Binary Epoch 3 [1700/1823] Loss: 0.4428
+2025-09-10 09:40:52,211 - INFO - Binary Epoch 3 [1800/1823] Loss: 0.5439
+2025-09-10 09:41:22,861 - INFO - Optimal threshold: 0.100 (f1=0.901)
+2025-09-10 09:41:22,862 - INFO - Binary Epoch 3: train_loss=0.526, train_acc=0.906, val_f1=0.901, threshold=0.100
+2025-09-10 09:41:22,902 - INFO - ✅ Nuevo mejor modelo binario: F1=0.901
+2025-09-10 09:41:23,798 - INFO - Binary Epoch 4 [0/1823] Loss: 0.8141
+2025-09-10 09:42:23,593 - INFO - Binary Epoch 4 [100/1823] Loss: 0.4029
+2025-09-10 09:43:23,391 - INFO - Binary Epoch 4 [200/1823] Loss: 0.4892
+2025-09-10 09:44:23,161 - INFO - Binary Epoch 4 [300/1823] Loss: 0.4136
+2025-09-10 09:45:22,965 - INFO - Binary Epoch 4 [400/1823] Loss: 0.5551
+2025-09-10 09:46:22,780 - INFO - Binary Epoch 4 [500/1823] Loss: 0.4458
+2025-09-10 09:47:22,564 - INFO - Binary Epoch 4 [600/1823] Loss: 0.9196
+2025-09-10 09:48:22,359 - INFO - Binary Epoch 4 [700/1823] Loss: 0.5246
+2025-09-10 09:49:22,169 - INFO - Binary Epoch 4 [800/1823] Loss: 0.1522
+2025-09-10 09:50:21,922 - INFO - Binary Epoch 4 [900/1823] Loss: 0.3786
+2025-09-10 09:51:21,751 - INFO - Binary Epoch 4 [1000/1823] Loss: 0.2408
+2025-09-10 09:52:21,514 - INFO - Binary Epoch 4 [1100/1823] Loss: 0.3740
+2025-09-10 09:53:21,291 - INFO - Binary Epoch 4 [1200/1823] Loss: 0.2622
+2025-09-10 09:54:21,067 - INFO - Binary Epoch 4 [1300/1823] Loss: 0.3384
+2025-09-10 09:55:20,816 - INFO - Binary Epoch 4 [1400/1823] Loss: 0.5066
+2025-09-10 09:56:20,645 - INFO - Binary Epoch 4 [1500/1823] Loss: 0.4020
+2025-09-10 09:57:20,419 - INFO - Binary Epoch 4 [1600/1823] Loss: 0.5310
+2025-09-10 09:58:20,237 - INFO - Binary Epoch 4 [1700/1823] Loss: 0.2334
+2025-09-10 09:59:20,048 - INFO - Binary Epoch 4 [1800/1823] Loss: 0.4662
+2025-09-10 09:59:50,673 - INFO - Optimal threshold: 0.100 (f1=0.891)
+2025-09-10 09:59:50,674 - INFO - Binary Epoch 4: train_loss=0.484, train_acc=0.916, val_f1=0.891, threshold=0.100
+2025-09-10 09:59:51,564 - INFO - Binary Epoch 5 [0/1823] Loss: 0.6808
+2025-09-10 10:00:51,378 - INFO - Binary Epoch 5 [100/1823] Loss: 0.6132
+2025-09-10 10:01:51,164 - INFO - Binary Epoch 5 [200/1823] Loss: 0.5940
+2025-09-10 10:02:50,961 - INFO - Binary Epoch 5 [300/1823] Loss: 0.8870
+2025-09-10 10:03:50,731 - INFO - Binary Epoch 5 [400/1823] Loss: 0.2917
+2025-09-10 10:04:50,495 - INFO - Binary Epoch 5 [500/1823] Loss: 0.5015
+2025-09-10 10:05:50,276 - INFO - Binary Epoch 5 [600/1823] Loss: 0.2924
+2025-09-10 10:06:50,101 - INFO - Binary Epoch 5 [700/1823] Loss: 0.2970
+2025-09-10 10:07:49,878 - INFO - Binary Epoch 5 [800/1823] Loss: 0.3857
+2025-09-10 10:08:49,658 - INFO - Binary Epoch 5 [900/1823] Loss: 0.2254
+2025-09-10 10:09:49,434 - INFO - Binary Epoch 5 [1000/1823] Loss: 0.2854
+2025-09-10 10:10:49,218 - INFO - Binary Epoch 5 [1100/1823] Loss: 0.3589
+2025-09-10 10:11:48,994 - INFO - Binary Epoch 5 [1200/1823] Loss: 0.6391
+2025-09-10 10:12:48,825 - INFO - Binary Epoch 5 [1300/1823] Loss: 0.4530
+2025-09-10 10:13:48,592 - INFO - Binary Epoch 5 [1400/1823] Loss: 0.5055
+2025-09-10 10:14:48,392 - INFO - Binary Epoch 5 [1500/1823] Loss: 0.4087
+2025-09-10 10:15:48,194 - INFO - Binary Epoch 5 [1600/1823] Loss: 0.8180
+2025-09-10 10:16:47,986 - INFO - Binary Epoch 5 [1700/1823] Loss: 0.3962
+2025-09-10 10:17:47,777 - INFO - Binary Epoch 5 [1800/1823] Loss: 0.2879
+2025-09-10 10:18:18,427 - INFO - Optimal threshold: 0.100 (f1=0.866)
+2025-09-10 10:18:18,428 - INFO - Binary Epoch 5: train_loss=0.457, train_acc=0.921, val_f1=0.866, threshold=0.100
+2025-09-10 10:18:19,263 - INFO - Binary Epoch 6 [0/1823] Loss: 0.1762
+2025-09-10 10:19:19,074 - INFO - Binary Epoch 6 [100/1823] Loss: 0.2172
+2025-09-10 10:20:18,845 - INFO - Binary Epoch 6 [200/1823] Loss: 0.4241
+2025-09-10 10:21:18,617 - INFO - Binary Epoch 6 [300/1823] Loss: 0.1984
+2025-09-10 10:22:18,350 - INFO - Binary Epoch 6 [400/1823] Loss: 0.2351
+2025-09-10 10:23:18,132 - INFO - Binary Epoch 6 [500/1823] Loss: 0.1834
+2025-09-10 10:24:17,792 - INFO - Binary Epoch 6 [600/1823] Loss: 0.3241
+2025-09-10 10:25:17,718 - INFO - Binary Epoch 6 [700/1823] Loss: 0.3067
+2025-09-10 10:26:17,538 - INFO - Binary Epoch 6 [800/1823] Loss: 0.3700
+2025-09-10 10:27:17,329 - INFO - Binary Epoch 6 [900/1823] Loss: 0.3346
+2025-09-10 10:28:17,090 - INFO - Binary Epoch 6 [1000/1823] Loss: 0.1865
+2025-09-10 10:29:16,906 - INFO - Binary Epoch 6 [1100/1823] Loss: 1.1921
+2025-09-10 10:30:16,683 - INFO - Binary Epoch 6 [1200/1823] Loss: 0.2227
+2025-09-10 10:31:16,445 - INFO - Binary Epoch 6 [1300/1823] Loss: 0.5825
+2025-09-10 10:32:16,260 - INFO - Binary Epoch 6 [1400/1823] Loss: 0.2165
+2025-09-10 10:33:16,071 - INFO - Binary Epoch 6 [1500/1823] Loss: 0.3986
+2025-09-10 10:34:15,877 - INFO - Binary Epoch 6 [1600/1823] Loss: 0.4016
+2025-09-10 10:35:15,655 - INFO - Binary Epoch 6 [1700/1823] Loss: 0.2401
+2025-09-10 10:36:15,445 - INFO - Binary Epoch 6 [1800/1823] Loss: 0.1808
+2025-09-10 10:36:46,115 - INFO - Optimal threshold: 0.100 (f1=0.903)
+2025-09-10 10:36:46,116 - INFO - Binary Epoch 6: train_loss=0.431, train_acc=0.929, val_f1=0.903, threshold=0.100
+2025-09-10 10:36:46,168 - INFO - ✅ Nuevo mejor modelo binario: F1=0.903
+2025-09-10 10:36:47,056 - INFO - Binary Epoch 7 [0/1823] Loss: 0.2919
+2025-09-10 10:37:46,847 - INFO - Binary Epoch 7 [100/1823] Loss: 0.1317
+2025-09-10 10:38:46,621 - INFO - Binary Epoch 7 [200/1823] Loss: 0.3991
+2025-09-10 10:39:46,416 - INFO - Binary Epoch 7 [300/1823] Loss: 0.7663
+2025-09-10 10:40:46,196 - INFO - Binary Epoch 7 [400/1823] Loss: 0.5400
+2025-09-10 10:41:45,945 - INFO - Binary Epoch 7 [500/1823] Loss: 0.3872
+2025-09-10 10:42:45,719 - INFO - Binary Epoch 7 [600/1823] Loss: 0.2117
+2025-09-10 10:43:45,545 - INFO - Binary Epoch 7 [700/1823] Loss: 0.2809
+2025-09-10 10:44:45,423 - INFO - Binary Epoch 7 [800/1823] Loss: 0.3508
+2025-09-10 10:45:45,229 - INFO - Binary Epoch 7 [900/1823] Loss: 0.5548
+2025-09-10 10:46:44,992 - INFO - Binary Epoch 7 [1000/1823] Loss: 0.2644
+2025-09-10 10:47:44,792 - INFO - Binary Epoch 7 [1100/1823] Loss: 0.4047
+2025-09-10 10:48:44,573 - INFO - Binary Epoch 7 [1200/1823] Loss: 0.5005
+2025-09-10 10:49:44,374 - INFO - Binary Epoch 7 [1300/1823] Loss: 0.2279
+2025-09-10 10:50:44,145 - INFO - Binary Epoch 7 [1400/1823] Loss: 0.3299
+2025-09-10 10:51:43,936 - INFO - Binary Epoch 7 [1500/1823] Loss: 0.3692
+2025-09-10 10:52:43,724 - INFO - Binary Epoch 7 [1600/1823] Loss: 0.2930
+2025-09-10 10:53:43,503 - INFO - Binary Epoch 7 [1700/1823] Loss: 0.3875
+2025-09-10 10:54:43,300 - INFO - Binary Epoch 7 [1800/1823] Loss: 0.4880
+2025-09-10 10:55:13,974 - INFO - Optimal threshold: 0.100 (f1=0.903)
+2025-09-10 10:55:13,975 - INFO - Binary Epoch 7: train_loss=0.404, train_acc=0.934, val_f1=0.903, threshold=0.100
+2025-09-10 10:55:14,017 - INFO - ✅ Nuevo mejor modelo binario: F1=0.903
+2025-09-10 10:55:14,922 - INFO - Binary Epoch 8 [0/1823] Loss: 0.2300
+2025-09-10 10:56:14,717 - INFO - Binary Epoch 8 [100/1823] Loss: 0.5227
+2025-09-10 10:57:14,513 - INFO - Binary Epoch 8 [200/1823] Loss: 0.4960
+2025-09-10 10:58:14,279 - INFO - Binary Epoch 8 [300/1823] Loss: 0.3434
+2025-09-10 10:59:14,047 - INFO - Binary Epoch 8 [400/1823] Loss: 0.4857
+2025-09-10 11:00:13,800 - INFO - Binary Epoch 8 [500/1823] Loss: 0.2900
+2025-09-10 11:01:13,589 - INFO - Binary Epoch 8 [600/1823] Loss: 0.5581
+2025-09-10 11:02:13,408 - INFO - Binary Epoch 8 [700/1823] Loss: 0.2288
+2025-09-10 11:03:13,192 - INFO - Binary Epoch 8 [800/1823] Loss: 0.3727
+2025-09-10 11:04:12,987 - INFO - Binary Epoch 8 [900/1823] Loss: 0.3195
+2025-09-10 11:05:12,789 - INFO - Binary Epoch 8 [1000/1823] Loss: 0.6395
+2025-09-10 11:06:12,592 - INFO - Binary Epoch 8 [1100/1823] Loss: 0.3947
+2025-09-10 11:07:12,408 - INFO - Binary Epoch 8 [1200/1823] Loss: 0.2675
+2025-09-10 11:08:12,200 - INFO - Binary Epoch 8 [1300/1823] Loss: 0.2465
+2025-09-10 11:09:11,964 - INFO - Binary Epoch 8 [1400/1823] Loss: 0.4309
+2025-09-10 11:10:11,749 - INFO - Binary Epoch 8 [1500/1823] Loss: 0.4234
+2025-09-10 11:11:11,515 - INFO - Binary Epoch 8 [1600/1823] Loss: 0.4408
+2025-09-10 11:12:11,281 - INFO - Binary Epoch 8 [1700/1823] Loss: 0.3407
+2025-09-10 11:13:11,059 - INFO - Binary Epoch 8 [1800/1823] Loss: 0.3158
+2025-09-10 11:13:41,733 - INFO - Optimal threshold: 0.100 (f1=0.897)
+2025-09-10 11:13:41,734 - INFO - Binary Epoch 8: train_loss=0.388, train_acc=0.939, val_f1=0.897, threshold=0.100
+2025-09-10 11:13:42,610 - INFO - Binary Epoch 9 [0/1823] Loss: 0.7037
+2025-09-10 11:14:42,434 - INFO - Binary Epoch 9 [100/1823] Loss: 0.1358
+2025-09-10 11:15:42,213 - INFO - Binary Epoch 9 [200/1823] Loss: 0.2136
+2025-09-10 11:16:41,984 - INFO - Binary Epoch 9 [300/1823] Loss: 0.3988
+2025-09-10 11:17:41,786 - INFO - Binary Epoch 9 [400/1823] Loss: 0.1837
+2025-09-10 11:18:41,596 - INFO - Binary Epoch 9 [500/1823] Loss: 0.1081
+2025-09-10 11:19:41,419 - INFO - Binary Epoch 9 [600/1823] Loss: 0.4163
+2025-09-10 11:20:41,178 - INFO - Binary Epoch 9 [700/1823] Loss: 0.3775
+2025-09-10 11:21:40,977 - INFO - Binary Epoch 9 [800/1823] Loss: 0.1398
+2025-09-10 11:22:40,740 - INFO - Binary Epoch 9 [900/1823] Loss: 0.3405
+2025-09-10 11:23:40,523 - INFO - Binary Epoch 9 [1000/1823] Loss: 0.1984
+2025-09-10 11:24:40,340 - INFO - Binary Epoch 9 [1100/1823] Loss: 0.2227
+2025-09-10 11:25:40,097 - INFO - Binary Epoch 9 [1200/1823] Loss: 0.4567
+2025-09-10 11:26:39,913 - INFO - Binary Epoch 9 [1300/1823] Loss: 0.6852
+2025-09-10 11:27:39,750 - INFO - Binary Epoch 9 [1400/1823] Loss: 0.7974
+2025-09-10 11:28:39,531 - INFO - Binary Epoch 9 [1500/1823] Loss: 0.4735
+2025-09-10 11:29:39,301 - INFO - Binary Epoch 9 [1600/1823] Loss: 0.5617
+2025-09-10 11:30:39,069 - INFO - Binary Epoch 9 [1700/1823] Loss: 0.3785
+2025-09-10 11:31:38,867 - INFO - Binary Epoch 9 [1800/1823] Loss: 0.1874
+2025-09-10 11:32:09,596 - INFO - Optimal threshold: 0.100 (f1=0.898)
+2025-09-10 11:32:09,597 - INFO - Binary Epoch 9: train_loss=0.371, train_acc=0.943, val_f1=0.898, threshold=0.100
+2025-09-10 11:32:10,505 - INFO - Binary Epoch 10 [0/1823] Loss: 0.1082
+2025-09-10 11:33:10,301 - INFO - Binary Epoch 10 [100/1823] Loss: 0.1523
+2025-09-10 11:34:10,056 - INFO - Binary Epoch 10 [200/1823] Loss: 0.4518
+2025-09-10 11:35:09,847 - INFO - Binary Epoch 10 [300/1823] Loss: 0.1969
+2025-09-10 11:36:09,640 - INFO - Binary Epoch 10 [400/1823] Loss: 0.2595
+2025-09-10 11:37:09,416 - INFO - Binary Epoch 10 [500/1823] Loss: 0.1132
+2025-09-10 11:38:09,230 - INFO - Binary Epoch 10 [600/1823] Loss: 0.2382
+2025-09-10 11:39:09,001 - INFO - Binary Epoch 10 [700/1823] Loss: 0.2363
+2025-09-10 11:40:08,790 - INFO - Binary Epoch 10 [800/1823] Loss: 0.0583
+2025-09-10 11:41:08,602 - INFO - Binary Epoch 10 [900/1823] Loss: 0.3317
+2025-09-10 11:42:08,430 - INFO - Binary Epoch 10 [1000/1823] Loss: 0.0943
+2025-09-10 11:43:08,262 - INFO - Binary Epoch 10 [1100/1823] Loss: 0.3497
+2025-09-10 11:43:52,616 - INFO - Binary Epoch 10 [1200/1823] Loss: 0.0958
+2025-09-10 11:44:19,795 - INFO - Binary Epoch 10 [1300/1823] Loss: 0.1640
+2025-09-10 11:44:46,987 - INFO - Binary Epoch 10 [1400/1823] Loss: 0.4062
+2025-09-10 11:45:14,186 - INFO - Binary Epoch 10 [1500/1823] Loss: 0.1182
+2025-09-10 11:45:41,363 - INFO - Binary Epoch 10 [1600/1823] Loss: 0.0951
+2025-09-10 11:46:08,547 - INFO - Binary Epoch 10 [1700/1823] Loss: 0.8337
+2025-09-10 11:46:35,728 - INFO - Binary Epoch 10 [1800/1823] Loss: 0.4524
+2025-09-10 11:46:50,002 - INFO - Optimal threshold: 0.100 (f1=0.896)
+2025-09-10 11:46:50,003 - INFO - Binary Epoch 10: train_loss=0.349, train_acc=0.949, val_f1=0.896, threshold=0.100
+2025-09-10 11:46:50,584 - INFO - Binary Epoch 11 [0/1823] Loss: 0.2268
+2025-09-10 11:47:17,767 - INFO - Binary Epoch 11 [100/1823] Loss: 0.5567
+2025-09-10 11:47:44,936 - INFO - Binary Epoch 11 [200/1823] Loss: 0.2650
+2025-09-10 11:48:12,122 - INFO - Binary Epoch 11 [300/1823] Loss: 0.3675
+2025-09-10 11:48:39,322 - INFO - Binary Epoch 11 [400/1823] Loss: 0.5201
+2025-09-10 11:49:06,509 - INFO - Binary Epoch 11 [500/1823] Loss: 0.2074
+2025-09-10 11:49:33,695 - INFO - Binary Epoch 11 [600/1823] Loss: 0.3262
+2025-09-10 11:50:00,883 - INFO - Binary Epoch 11 [700/1823] Loss: 0.6883
+2025-09-10 11:50:28,061 - INFO - Binary Epoch 11 [800/1823] Loss: 0.2123
+2025-09-10 11:50:55,254 - INFO - Binary Epoch 11 [900/1823] Loss: 0.2276
+2025-09-10 11:51:22,454 - INFO - Binary Epoch 11 [1000/1823] Loss: 0.1172
+2025-09-10 11:51:49,637 - INFO - Binary Epoch 11 [1100/1823] Loss: 0.1182
+2025-09-10 11:52:16,826 - INFO - Binary Epoch 11 [1200/1823] Loss: 0.5166
+2025-09-10 11:52:44,016 - INFO - Binary Epoch 11 [1300/1823] Loss: 0.4726
+2025-09-10 11:53:11,202 - INFO - Binary Epoch 11 [1400/1823] Loss: 0.2877
+2025-09-10 11:53:38,387 - INFO - Binary Epoch 11 [1500/1823] Loss: 0.1330
+2025-09-10 11:54:05,573 - INFO - Binary Epoch 11 [1600/1823] Loss: 0.7185
+2025-09-10 11:54:32,764 - INFO - Binary Epoch 11 [1700/1823] Loss: 0.1105
+2025-09-10 11:54:59,934 - INFO - Binary Epoch 11 [1800/1823] Loss: 0.0727
+2025-09-10 11:55:14,194 - INFO - Optimal threshold: 0.100 (f1=0.889)
+2025-09-10 11:55:14,195 - INFO - Binary Epoch 11: train_loss=0.336, train_acc=0.952, val_f1=0.889, threshold=0.100
+2025-09-10 11:55:14,734 - INFO - Binary Epoch 12 [0/1823] Loss: 0.1732
+2025-09-10 11:55:41,913 - INFO - Binary Epoch 12 [100/1823] Loss: 0.3048
+2025-09-10 11:56:09,102 - INFO - Binary Epoch 12 [200/1823] Loss: 0.2067
+2025-09-10 11:56:36,286 - INFO - Binary Epoch 12 [300/1823] Loss: 0.2690
+2025-09-10 11:57:03,466 - INFO - Binary Epoch 12 [400/1823] Loss: 0.6613
+2025-09-10 11:57:30,645 - INFO - Binary Epoch 12 [500/1823] Loss: 0.2598
+2025-09-10 11:57:57,835 - INFO - Binary Epoch 12 [600/1823] Loss: 0.1470
+2025-09-10 11:58:25,013 - INFO - Binary Epoch 12 [700/1823] Loss: 0.7891
+2025-09-10 11:58:52,189 - INFO - Binary Epoch 12 [800/1823] Loss: 0.0568
+2025-09-10 11:59:19,362 - INFO - Binary Epoch 12 [900/1823] Loss: 0.2506
+2025-09-10 11:59:46,551 - INFO - Binary Epoch 12 [1000/1823] Loss: 0.1203
+2025-09-10 12:00:13,754 - INFO - Binary Epoch 12 [1100/1823] Loss: 0.3689
+2025-09-10 12:00:40,940 - INFO - Binary Epoch 12 [1200/1823] Loss: 0.2564
+2025-09-10 12:01:08,111 - INFO - Binary Epoch 12 [1300/1823] Loss: 0.0923
+2025-09-10 12:01:35,281 - INFO - Binary Epoch 12 [1400/1823] Loss: 0.0762
+2025-09-10 12:02:02,455 - INFO - Binary Epoch 12 [1500/1823] Loss: 0.1914
+2025-09-10 12:02:29,617 - INFO - Binary Epoch 12 [1600/1823] Loss: 0.3965
+2025-09-10 12:02:56,788 - INFO - Binary Epoch 12 [1700/1823] Loss: 0.1164
+2025-09-10 12:03:23,964 - INFO - Binary Epoch 12 [1800/1823] Loss: 0.3983
+2025-09-10 12:03:38,239 - INFO - Optimal threshold: 0.100 (f1=0.881)
+2025-09-10 12:03:38,239 - INFO - Binary Epoch 12: train_loss=0.324, train_acc=0.956, val_f1=0.881, threshold=0.100
+Traceback (most recent call last):
+  File "/root/repositories/LAIA/3. Training/train.py", line 2495, in <module>
+    main()
+  File "/root/repositories/LAIA/3. Training/train.py", line 2436, in main
+    binary_model, optimal_threshold = train_binary_stage(train_items, val_bal_items, args, device)
+  File "/root/repositories/LAIA/3. Training/train.py", line 2052, in train_binary_stage
+    checkpoint = torch.load(os.path.join(args.save_dir, 'binary_model.pt'))
+  File "/usr/local/lib/python3.10/dist-packages/torch/serialization.py", line 1470, in load
+    raise pickle.UnpicklingError(_get_wo_message(str(e))) from None
+_pickle.UnpicklingError: Weights only load failed. This file can still be loaded, to do so you have two options, [1mdo those steps only if you trust the source of the checkpoint[0m.
+	(1) In PyTorch 2.6, we changed the default value of the `weights_only` argument in `torch.load` from `False` to `True`. Re-running `torch.load` with `weights_only` set to `False` will likely succeed, but it can result in arbitrary code execution. Do it only if you got the file from a trusted source.
+	(2) Alternatively, to load with `weights_only=True` please check the recommended steps in the following error message.
+	WeightsUnpickler error: Unsupported global: GLOBAL numpy._core.multiarray.scalar was not an allowed global by default. Please use `torch.serialization.add_safe_globals([scalar])` or the `torch.serialization.safe_globals([scalar])` context manager to allowlist this global if you trust this class/function.
+
+Check the documentation of torch.load to learn more about types accepted by default with weights_only https://pytorch.org/docs/stable/generated/torch.load.html.
+Traceback (most recent call last):
+  File "/root/repositories/LAIA/3. Training/train.py", line 2495, in <module>
+    main()
+  File "/root/repositories/LAIA/3. Training/train.py", line 2436, in main
+    binary_model, optimal_threshold = train_binary_stage(train_items, val_bal_items, args, device)
+  File "/root/repositories/LAIA/3. Training/train.py", line 2052, in train_binary_stage
+    checkpoint = torch.load(os.path.join(args.save_dir, 'binary_model.pt'))
+  File "/usr/local/lib/python3.10/dist-packages/torch/serialization.py", line 1470, in load
+    raise pickle.UnpicklingError(_get_wo_message(str(e))) from None
+_pickle.UnpicklingError: Weights only load failed. This file can still be loaded, to do so you have two options, [1mdo those steps only if you trust the source of the checkpoint[0m.
+	(1) In PyTorch 2.6, we changed the default value of the `weights_only` argument in `torch.load` from `False` to `True`. Re-running `torch.load` with `weights_only` set to `False` will likely succeed, but it can result in arbitrary code execution. Do it only if you got the file from a trusted source.
+	(2) Alternatively, to load with `weights_only=True` please check the recommended steps in the following error message.
+	WeightsUnpickler error: Unsupported global: GLOBAL numpy._core.multiarray.scalar was not an allowed global by default. Please use `torch.serialization.add_safe_globals([scalar])` or the `torch.serialization.safe_globals([scalar])` context manager to allowlist this global if you trust this class/function.
+
+Check the documentation of torch.load to learn more about types accepted by default with weights_only https://pytorch.org/docs/stable/generated/torch.load.html.

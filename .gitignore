@@ -1,12 +1,10 @@
 # Modelos pesados
 *.h5
-
 # Videos
 *.mp4
 
-# Archivos temporales
-*.log
-*.tmp
+# .venv
+.venv/
 
 # Archivos comprimidos
 *.zip

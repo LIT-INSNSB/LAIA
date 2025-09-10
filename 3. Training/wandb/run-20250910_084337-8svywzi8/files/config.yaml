@@ -1,0 +1,182 @@
+_wandb:
+    value:
+        cli_version: 0.21.3
+        e:
+            gcyhwphaun2a3csecyg39xc2ievjhuxs:
+                args:
+                    - --two_stage
+                    - --data_path
+                    - ../prepared/h5/PSKUS-v2.h5
+                    - --t_win
+                    - "64"
+                    - --stride
+                    - "8"
+                    - --batch_size
+                    - "64"
+                    - --lr
+                    - "2e-4"
+                    - --weight_decay
+                    - "1e-3"
+                    - --device
+                    - cuda
+                    - --seed
+                    - "123"
+                    - --scheduler
+                    - plateau
+                    - --amp
+                    - --val_bg_ratio
+                    - "0.30"
+                    - --bg_max_ratio
+                    - "0.20"
+                    - --use_wandb
+                    - --plot_local
+                    - --cache_mode
+                    - lazy
+                    - --max_cache_gb
+                    - "6"
+                    - --num_workers
+                    - "12"
+                    - --pin_memory
+                    - "1"
+                    - --persistent_workers
+                    - "1"
+                    - --prefetch_factor
+                    - "8"
+                    - --save_dir
+                    - ./experiments/run_006
+                    - --project_name
+                    - stgcn-gesture
+                    - --run_name
+                    - run_006_bs64_bg20
+                codePath: 3. Training/train.py
+                codePathLocal: train.py
+                cpu_count: 6
+                cpu_count_logical: 12
+                cudaVersion: "12.7"
+                disk:
+                    /:
+                        total: "133003395072"
+                        used: "32112902144"
+                email: c.vasquezr@pucp.edu.pe
+                executable: /root/repositories/LAIA/.venv/bin/python
+                git:
+                    commit: 64b0f6b0295ac47705c708e89ba208edce2f75c7
+                    remote: https://github.com/LIT-INSNSB/LAIA.git
+                gpu: NVIDIA A100 80GB PCIe
+                gpu_count: 1
+                gpu_nvidia:
+                    - architecture: Ampere
+                      cudaCores: 6912
+                      memoryTotal: "85899345920"
+                      name: NVIDIA A100 80GB PCIe
+                      uuid: GPU-d1e2da29-ff07-faad-67b5-4a217f55222e
+                host: curvy-mellow-marmoset
+                memory:
+                    total: "126608678912"
+                os: Linux-5.15.0-126-generic-x86_64-with-glibc2.35
+                program: /root/repositories/LAIA/3. Training/train.py
+                python: CPython 3.10.12
+                root: /root/repositories/LAIA/3. Training
+                startedAt: "2025-09-10T08:43:37.427684Z"
+                writerId: gcyhwphaun2a3csecyg39xc2ievjhuxs
+        m: []
+        python_version: 3.10.12
+        t:
+            "1":
+                - 1
+                - 5
+                - 53
+            "2":
+                - 1
+                - 5
+                - 53
+            "3":
+                - 13
+                - 15
+                - 16
+            "4": 3.10.12
+            "5": 0.21.3
+            "12": 0.21.3
+            "13": linux-x86_64
+amp:
+    value: true
+augment_minority:
+    value: false
+batch_size:
+    value: 64
+bg_max_ratio:
+    value: 0.2
+bg_weight:
+    value: 0.1
+cache_mode:
+    value: lazy
+cb_beta:
+    value: 0.9999
+data_path:
+    value: ../prepared/h5/PSKUS-v2.h5
+device:
+    value: cuda
+dropout:
+    value: 0.3
+early_stopping_patience:
+    value: 15
+epochs:
+    value: 50
+focal_gamma:
+    value: 2
+in_channels:
+    value: 2
+log_interval:
+    value: 100
+loss_type:
+    value: focal
+lr:
+    value: 0.0002
+max_cache_gb:
+    value: 6
+num_classes:
+    value: 7
+num_workers:
+    value: 12
+persistent_workers:
+    value: 1
+pin_memory:
+    value: 1
+plot_local:
+    value: true
+prefetch_factor:
+    value: 8
+project_name:
+    value: stgcn-gesture
+run_name:
+    value: run_006_bs64_bg20
+sampling_strategy:
+    value: none
+save_dir:
+    value: ./experiments/run_006
+scheduler:
+    value: plateau
+seed:
+    value: 123
+stride:
+    value: 8
+t_win:
+    value: 64
+tau:
+    value: 1
+test_datasets:
+    value: []
+two_stage:
+    value: true
+use_class_attention:
+    value: false
+use_wandb:
+    value: true
+use_z:
+    value: false
+val_bg_ratio:
+    value: 0.3
+val_fraction:
+    value: 0.18
+weight_decay:
+    value: 0.001

@@ -1,0 +1,86 @@
+{
+  "os": "Linux-5.15.0-126-generic-x86_64-with-glibc2.35",
+  "python": "CPython 3.10.12",
+  "startedAt": "2025-09-10T08:43:37.427684Z",
+  "args": [
+    "--two_stage",
+    "--data_path",
+    "../prepared/h5/PSKUS-v2.h5",
+    "--t_win",
+    "64",
+    "--stride",
+    "8",
+    "--batch_size",
+    "64",
+    "--lr",
+    "2e-4",
+    "--weight_decay",
+    "1e-3",
+    "--device",
+    "cuda",
+    "--seed",
+    "123",
+    "--scheduler",
+    "plateau",
+    "--amp",
+    "--val_bg_ratio",
+    "0.30",
+    "--bg_max_ratio",
+    "0.20",
+    "--use_wandb",
+    "--plot_local",
+    "--cache_mode",
+    "lazy",
+    "--max_cache_gb",
+    "6",
+    "--num_workers",
+    "12",
+    "--pin_memory",
+    "1",
+    "--persistent_workers",
+    "1",
+    "--prefetch_factor",
+    "8",
+    "--save_dir",
+    "./experiments/run_006",
+    "--project_name",
+    "stgcn-gesture",
+    "--run_name",
+    "run_006_bs64_bg20"
+  ],
+  "program": "/root/repositories/LAIA/3. Training/train.py",
+  "codePath": "3. Training/train.py",
+  "codePathLocal": "train.py",
+  "git": {
+    "remote": "https://github.com/LIT-INSNSB/LAIA.git",
+    "commit": "64b0f6b0295ac47705c708e89ba208edce2f75c7"
+  },
+  "email": "c.vasquezr@pucp.edu.pe",
+  "root": "/root/repositories/LAIA/3. Training",
+  "host": "curvy-mellow-marmoset",
+  "executable": "/root/repositories/LAIA/.venv/bin/python",
+  "cpu_count": 6,
+  "cpu_count_logical": 12,
+  "gpu": "NVIDIA A100 80GB PCIe",
+  "gpu_count": 1,
+  "disk": {
+    "/": {
+      "total": "133003395072",
+      "used": "32112902144"
+    }
+  },
+  "memory": {
+    "total": "126608678912"
+  },
+  "gpu_nvidia": [
+    {
+      "name": "NVIDIA A100 80GB PCIe",
+      "memoryTotal": "85899345920",
+      "cudaCores": 6912,
+      "architecture": "Ampere",
+      "uuid": "GPU-d1e2da29-ff07-faad-67b5-4a217f55222e"
+    }
+  ],
+  "cudaVersion": "12.7",
+  "writerId": "gcyhwphaun2a3csecyg39xc2ievjhuxs"
+}

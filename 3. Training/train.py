@@ -21,6 +21,13 @@ from sklearn.metrics import (classification_report, confusion_matrix, f1_score,
 from sklearn.model_selection import GroupKFold
 from torch.utils.data import DataLoader, Dataset, WeightedRandomSampler
 
+# A100: activa TF32 y precisión alta en matmul
+torch.backends.cuda.matmul.allow_tf32 = True
+torch.backends.cudnn.allow_tf32 = True
+try:
+    torch.set_float32_matmul_precision('high')
+except Exception:
+    pass
 # Optional wandb import
 try:
     import wandb
@@ -944,7 +951,8 @@ class PSKUSDataset(Dataset):
 
         # Usa RAM si está cacheado; si no, lee de HDF5 y opcionalmente cachea (lazy/all)
         xyz = self._get_slice(vid, t0, t1)  # (t', 42, C)
-
+        if not np.isfinite(xyz).all():
+            xyz = np.nan_to_num(xyz, nan=0.0, posinf=0.0, neginf=0.0)
         # Pad si hace falta (cuando estamos cerca del final del vídeo)
         if xyz.shape[0] < t_win:
             pad = np.zeros((t_win - xyz.shape[0], 42, xyz.shape[2]), dtype=xyz.dtype)
@@ -973,8 +981,23 @@ class PSKUSDataset(Dataset):
         if hasattr(self, 'h5_file') and self.h5_file is not None:
             self.h5_file.close()
 
+def amp_setup(device, use_amp: bool):
+    is_cuda = (device.type == 'cuda')
+    compute_cap = torch.cuda.get_device_capability(0)[0] if is_cuda else 0
+    use_bf16 = is_cuda and compute_cap >= 8  # Ampere/A100+
 
-def set_seed(seed: int):
+    amp_dtype = torch.bfloat16 if use_bf16 else torch.float16
+    enabled_amp = bool(use_amp and is_cuda)
+
+    # TF32
+    torch.backends.cuda.matmul.allow_tf32 = True
+    torch.backends.cudnn.allow_tf32 = True
+
+    # GradScaler solo si FP16
+    scaler = torch.cuda.amp.GradScaler(enabled=(enabled_amp and (amp_dtype == torch.float16)))
+    return amp_dtype, enabled_amp, scaler
+
+def set_seed(seed: int, deterministic: bool = False):
     """Set random seeds for reproducibility."""
     random.seed(seed)
     np.random.seed(seed)
@@ -982,8 +1005,9 @@ def set_seed(seed: int):
     if torch.cuda.is_available():
         torch.cuda.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
+    torch.backends.cudnn.deterministic = bool(deterministic)
+    torch.backends.cudnn.benchmark = not bool(deterministic)
+
 
 
 def create_balanced_sampler(labels: List[int], strategy: str = "oversample") -> WeightedRandomSampler:
@@ -1183,8 +1207,9 @@ def build_model(num_classes: int, in_channels: int, device: torch.device,
 
 
 def train_one_epoch(model, dataloader, criterion, optimizer, device, epoch, log_interval,
-                    scaler: Optional[torch.cuda.amp.GradScaler] = None,
-                    enabled_amp: bool = False) -> Dict[str, float]:
+                    scaler: Optional[torch.amp.GradScaler] = None,
+                    enabled_amp: bool = False,
+                    amp_dtype: torch.dtype = torch.float16) -> Dict[str, float]:
 
     model.train()
     total_loss = 0.0
@@ -1200,11 +1225,11 @@ def train_one_epoch(model, dataloader, criterion, optimizer, device, epoch, log_
 
         optimizer.zero_grad(set_to_none=True)
 
-        with torch.amp.autocast('cuda', enabled=enabled_amp):
+        with torch.amp.autocast('cuda', dtype=amp_dtype, enabled=enabled_amp):
             output = model(data)
             loss = criterion(output, target)
 
-        if scaler is not None and enabled_amp:
+        if scaler is not None and enabled_amp and scaler.is_enabled():
             scaler.scale(loss).backward()
             scaler.unscale_(optimizer)
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
@@ -1250,7 +1275,9 @@ def train_one_epoch(model, dataloader, criterion, optimizer, device, epoch, log_
 
 
 def evaluate(model: nn.Module, dataloader: DataLoader, criterion: nn.Module,
-            device: torch.device, num_classes: int) -> Dict[str, Union[float, Dict]]:
+             device: torch.device, num_classes: int,
+             enabled_amp: bool = False, amp_dtype: torch.dtype = torch.float16) -> Dict[str, Union[float, Dict]]:
+
     """Enhanced evaluation with detailed metrics."""
     model.eval()
     test_loss = 0
@@ -1265,7 +1292,7 @@ def evaluate(model: nn.Module, dataloader: DataLoader, criterion: nn.Module,
         for data, target in dataloader:
             data   = data.to(device, non_blocking=True)
             target = target.to(device, non_blocking=True)
-            with torch.amp.autocast('cuda', enabled=(device.type=='cuda')):
+            with torch.amp.autocast('cuda', dtype=amp_dtype, enabled=enabled_amp):
                 output = model(data)
                 test_loss += criterion(output, target).item()
                 pred = output.argmax(dim=1)
@@ -1413,442 +1440,450 @@ def plot_confusion_matrix(cm: List[List[int]], class_names: List[str], save_dir:
     plt.close()
 
 
-def main():
-    parser = argparse.ArgumentParser(description='Enhanced LAIA-Net Training with Class Balancing')
+# def main():
+#     parser = argparse.ArgumentParser(description='Enhanced LAIA-Net Training with Class Balancing')
     
-    # Data parameters
-    parser.add_argument('--data_path', type=str, required=True,
-                       help='Path to HDF5 dataset file')
-    parser.add_argument('--t_win', type=int, default=64,
-                       help='Temporal window size')
-    parser.add_argument('--stride', type=int, default=8,
-                       help='Stride for sliding window')
-    parser.add_argument('--val_fraction', type=float, default=0.2,
-                       help='Validation split fraction')
-    parser.add_argument('--test_datasets', type=str, nargs='*', default=[],
-                       help='Dataset IDs to use for testing')
+#     # Data parameters
+#     parser.add_argument('--data_path', type=str, required=True,
+#                        help='Path to HDF5 dataset file')
+#     parser.add_argument('--t_win', type=int, default=64,
+#                        help='Temporal window size')
+#     parser.add_argument('--stride', type=int, default=8,
+#                        help='Stride for sliding window')
+#     parser.add_argument('--val_fraction', type=float, default=0.2,
+#                        help='Validation split fraction')
+#     parser.add_argument('--test_datasets', type=str, nargs='*', default=[],
+#                        help='Dataset IDs to use for testing')
     
-    # Model parameters
-    parser.add_argument('--model', type=str, default='enhanced_stgcn',
-                       choices=['enhanced_stgcn'], help='Model architecture')
-    parser.add_argument('--num_classes', type=int, default=7,
-                       help='Number of classes')
-    parser.add_argument('--in_channels', type=int, default=2,
-                       help='Number of input channels (2 for XY, 3 for XYZ)')
-    parser.add_argument('--use_z', action='store_true',
-                       help='Use Z coordinate')
-    parser.add_argument('--dropout', type=float, default=0.3,
-                       help='Dropout rate')
-    parser.add_argument('--use_class_attention', action='store_true', default=True,
-                       help='Use class attention mechanism')
+#     # Model parameters
+#     parser.add_argument('--model', type=str, default='enhanced_stgcn',
+#                        choices=['enhanced_stgcn'], help='Model architecture')
+#     parser.add_argument('--num_classes', type=int, default=7,
+#                        help='Number of classes')
+#     parser.add_argument('--in_channels', type=int, default=2,
+#                        help='Number of input channels (2 for XY, 3 for XYZ)')
+#     parser.add_argument('--use_z', action='store_true',
+#                        help='Use Z coordinate')
+#     parser.add_argument('--dropout', type=float, default=0.3,
+#                        help='Dropout rate')
+#     parser.add_argument('--use_class_attention', action='store_true', default=True,
+#                        help='Use class attention mechanism')
     
-    # Training parameters
-    parser.add_argument('--epochs', type=int, default=10,
-                       help='Number of training epochs')
-    parser.add_argument('--batch_size', type=int, default=32,
-                       help='Batch size')
-    parser.add_argument('--lr', type=float, default=1e-4,
-                       help='Learning rate')
-    parser.add_argument('--weight_decay', type=float, default=1e-4,
-                       help='Weight decay')
-    parser.add_argument('--scheduler', type=str, default='cosine',
-                       choices=['cosine', 'step', 'plateau'], help='Learning rate scheduler')
+#     # Training parameters
+#     parser.add_argument('--epochs', type=int, default=10,
+#                        help='Number of training epochs')
+#     parser.add_argument('--batch_size', type=int, default=32,
+#                        help='Batch size')
+#     parser.add_argument('--lr', type=float, default=1e-4,
+#                        help='Learning rate')
+#     parser.add_argument('--weight_decay', type=float, default=1e-4,
+#                        help='Weight decay')
+#     parser.add_argument('--scheduler', type=str, default='cosine',
+#                        choices=['cosine', 'step', 'plateau'], help='Learning rate scheduler')
     
-    # Class balancing parameters
-    parser.add_argument('--loss_type', type=str, default='class_balanced',
-                       choices=['ce', 'focal', 'class_balanced'], 
-                       help='Loss function type')
-    parser.add_argument('--focal_gamma', type=float, default=2.0,
-                       help='Focal loss gamma parameter')
-    parser.add_argument('--cb_beta', type=float, default=0.9999,
-                       help='Class-balanced loss beta parameter')
-    parser.add_argument('--sampling_strategy', type=str, default='balanced',
-                       choices=['none', 'oversample', 'undersample', 'balanced'],
-                       help='Sampling strategy for class balancing')
-    parser.add_argument('--augment_minority', action='store_true', default=False,
-                       help='Apply data augmentation to minority classes')
-    parser.add_argument('--bg_weight', type=float, default=0.1,
-                    help='Peso relativo para la clase 0 en la pérdida')
-    parser.add_argument('--bg_max_ratio', type=float, default=-1.0,
-                        help='Si >0, porcentaje máximo de clase 0 en train (downsampling)')
-    # System parameters
-    parser.add_argument('--seed', type=int, default=42,
-                       help='Random seed')
-    parser.add_argument('--device', type=str, default='auto',
-                       help='Device to use (auto, cpu, cuda)')
-    parser.add_argument('--num_workers', type=int, default=4,
-                       help='Number of data loader workers')
+#     # Class balancing parameters
+#     parser.add_argument('--loss_type', type=str, default='class_balanced',
+#                        choices=['ce', 'focal', 'class_balanced'], 
+#                        help='Loss function type')
+#     parser.add_argument('--focal_gamma', type=float, default=2.0,
+#                        help='Focal loss gamma parameter')
+#     parser.add_argument('--cb_beta', type=float, default=0.9999,
+#                        help='Class-balanced loss beta parameter')
+#     parser.add_argument('--sampling_strategy', type=str, default='balanced',
+#                        choices=['none', 'oversample', 'undersample', 'balanced'],
+#                        help='Sampling strategy for class balancing')
+#     parser.add_argument('--augment_minority', action='store_true', default=False,
+#                        help='Apply data augmentation to minority classes')
+#     parser.add_argument('--bg_weight', type=float, default=0.1,
+#                     help='Peso relativo para la clase 0 en la pérdida')
+#     parser.add_argument('--bg_max_ratio', type=float, default=-1.0,
+#                         help='Si >0, porcentaje máximo de clase 0 en train (downsampling)')
+#     # System parameters
+#     parser.add_argument('--seed', type=int, default=42,
+#                        help='Random seed')
+#     parser.add_argument('--device', type=str, default='auto',
+#                        help='Device to use (auto, cpu, cuda)')
+#     parser.add_argument('--num_workers', type=int, default=4,
+#                        help='Number of data loader workers')
     
-    # Logging parameters
-    parser.add_argument('--log_interval', type=int, default=50,
-                       help='Log interval for training')
-    parser.add_argument('--save_dir', type=str, default='./outputs_enhanced',
-                       help='Directory to save outputs')
-    parser.add_argument('--early_stopping_patience', type=int, default=20,
-                       help='Early stopping patience')
+#     # Logging parameters
+#     parser.add_argument('--log_interval', type=int, default=50,
+#                        help='Log interval for training')
+#     parser.add_argument('--save_dir', type=str, default='./outputs_enhanced',
+#                        help='Directory to save outputs')
+#     parser.add_argument('--early_stopping_patience', type=int, default=20,
+#                        help='Early stopping patience')
     
-    # Wandb parameters
-    parser.add_argument('--use_wandb', action='store_true',
-                       help='Use Weights & Biases for logging')
-    parser.add_argument('--project_name', type=str, default='LAIA-net',
-                       help='Wandb project name')
-    parser.add_argument('--run_name', type=str, default=None,
-                       help='Wandb run name')
+#     # Wandb parameters
+#     parser.add_argument('--use_wandb', action='store_true',
+#                        help='Use Weights & Biases for logging')
+#     parser.add_argument('--project_name', type=str, default='LAIA-net',
+#                        help='Wandb project name')
+#     parser.add_argument('--run_name', type=str, default=None,
+#                        help='Wandb run name')
     
-    # Plotting parameters
-    parser.add_argument('--plot_local', action='store_true', default=True,
-                       help='Save plots locally')
+#     # Plotting parameters
+#     parser.add_argument('--plot_local', action='store_true', default=True,
+#                        help='Save plots locally')
     
-    # --- Rendimiento / CUDA / AMP ---
-    parser.add_argument('--amp', action='store_true',
-                        help='Usar mixed precision (autocast + GradScaler) en CUDA')
-    parser.add_argument('--pin_memory', action='store_true', default=True,
-                        help='pin_memory en DataLoader (solo útil con CUDA)')
-    parser.add_argument('--persistent_workers', action='store_true', default=True,
-                        help='Mantener workers vivos entre epochs (requiere num_workers>0)')
-    parser.add_argument('--prefetch_factor', type=int, default=4,
-                        help='Batches prefetch por worker (requiere num_workers>0)')
+#     # --- Rendimiento / CUDA / AMP ---
+#     parser.add_argument('--amp', action='store_true', help='AMP')
+#     parser.add_argument('--amp_dtype', type=str, choices=['bf16','fp16'], default='bf16',
+#                     help='Tipo de AMP en CUDA (A100 -> bf16)')
+#     parser.add_argument('--grad_clip', type=float, default=1.0, help='Max grad norm')
+#     parser.add_argument('--skip_bad_batch', action='store_true', help='Saltar batch con loss no finita')
+#     parser.add_argument('--deterministic', action='store_true', help='Entrenamiento determinista (más lento)')
 
-    # --- Cache en RAM del HDF5 ---
-    parser.add_argument('--cache_mode', type=str, default='none',
-                        choices=['none', 'lazy', 'all'],
-                        help='Cache por vídeo en RAM: none (sin cache), lazy (bajo demanda), all (precargar todo)')
-    parser.add_argument('--max_cache_gb', type=float, default=2.0,
-                        help='Límite aproximado de RAM para cache lazy (no estricto)')
+#     parser.add_argument('--pin_memory', action='store_true', default=True,
+#                         help='pin_memory en DataLoader (solo útil con CUDA)')
+#     parser.add_argument('--persistent_workers', action='store_true', default=True,
+#                         help='Mantener workers vivos entre epochs (requiere num_workers>0)')
+#     parser.add_argument('--prefetch_factor', type=int, default=4,
+#                         help='Batches prefetch por worker (requiere num_workers>0)')
+
+#     # --- Cache en RAM del HDF5 ---
+#     parser.add_argument('--cache_mode', type=str, default='none',
+#                         choices=['none', 'lazy', 'all'],
+#                         help='Cache por vídeo en RAM: none (sin cache), lazy (bajo demanda), all (precargar todo)')
+#     parser.add_argument('--max_cache_gb', type=float, default=2.0,
+#                         help='Límite aproximado de RAM para cache lazy (no estricto)')
     
         
-    args = parser.parse_args()
+#     args = parser.parse_args()
     
-    # Set up device
-    if args.device == 'auto':
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    else:
-        device = torch.device(args.device)
+#     # Set up device
+#     if args.device == 'auto':
+#         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+#     else:
+#         device = torch.device(args.device)
     
-    logger.info(f'Using device: {device}')
+#     logger.info(f'Using device: {device}')
     
-    # Set seed
-    set_seed(args.seed)
-# ------------------------------------------------------------------
-# Ajustes de DataLoader y cache  ▸  poner después de args.parse_args()
-# ------------------------------------------------------------------
-    pin_memory = bool(args.pin_memory and device.type == 'cuda')
-    use_persistent = bool(args.persistent_workers and args.num_workers > 0)
+#     # Set seed
+#     set_seed(args.seed, deterministic=args.deterministic)
 
-    loader_kwargs = dict(
-        batch_size      = args.batch_size,
-        num_workers     = args.num_workers,
-        pin_memory      = pin_memory,
-        persistent_workers = use_persistent,
-        drop_last       = True          # solo para train; val/test lo quitamos luego
-    )
 
-    # prefetch_factor solo existe cuando num_workers > 0 y torch ≥1.7
-    if args.num_workers > 0:
-        try:
-            loader_kwargs['prefetch_factor'] = max(2, int(args.prefetch_factor))
-        except TypeError:
-            pass  # versión de torch sin este parámetro
+#     pin_memory = bool(args.pin_memory and device.type == 'cuda')
+#     use_persistent = bool(args.persistent_workers and args.num_workers > 0)
 
-    # Create output directory
-    os.makedirs(args.save_dir, exist_ok=True)
-    if args.plot_local:
-        os.makedirs(os.path.join(args.save_dir, 'plots'), exist_ok=True)
+#     loader_kwargs = dict(
+#         batch_size      = args.batch_size,
+#         num_workers     = args.num_workers,
+#         pin_memory      = pin_memory,
+#         persistent_workers = use_persistent,
+#         drop_last       = True          # solo para train; val/test lo quitamos luego
+#     )
+
+#     # prefetch_factor solo existe cuando num_workers > 0 y torch ≥1.7
+#     if args.num_workers > 0:
+#         try:
+#             loader_kwargs['prefetch_factor'] = max(2, int(args.prefetch_factor))
+#         except TypeError:
+#             pass  # versión de torch sin este parámetro
+
+#     # Create output directory
+#     os.makedirs(args.save_dir, exist_ok=True)
+#     if args.plot_local:
+#         os.makedirs(os.path.join(args.save_dir, 'plots'), exist_ok=True)
     
-    # Initialize wandb if requested
-    if args.use_wandb:
-        if not WANDB_AVAILABLE:
-            logger.warning("Wandb not available. Install with: pip install wandb")
-            args.use_wandb = False
-        else:
-            try:
-                wandb.init(
-                    project=args.project_name,
-                    entity='c-vasquezr',
-                    name=args.run_name,
-                    config=vars(args),
-                    tags=['class-imbalance', 'enhanced-stgcn']
-                )
-                logger.info("Wandb initialized successfully")
-            except Exception as e:
-                logger.warning(f"Failed to initialize wandb: {e}. Continuing without wandb.")
-                args.use_wandb = False
+#     # Initialize wandb if requested
+#     if args.use_wandb:
+#         if not WANDB_AVAILABLE:
+#             logger.warning("Wandb not available. Install with: pip install wandb")
+#             args.use_wandb = False
+#         else:
+#             try:
+#                 wandb.init(
+#                     project=args.project_name,
+#                     entity='c-vasquezr',
+#                     name=args.run_name,
+#                     config=vars(args),
+#                     tags=['class-imbalance', 'enhanced-stgcn']
+#                 )
+#                 logger.info("Wandb initialized successfully")
+#             except Exception as e:
+#                 logger.warning(f"Failed to initialize wandb: {e}. Continuing without wandb.")
+#                 args.use_wandb = False
     
-    # Adjust input channels based on use_z
-    if args.use_z:
-        args.in_channels = 3
+#     # Adjust input channels based on use_z
+#     if args.use_z:
+#         args.in_channels = 3
     
-    # Load data
-    train_items, val_items, test_items = load_data(
-        args.data_path, args.t_win, args.stride, args.val_fraction,
-        args.test_datasets, args.seed
-    )
-    if args.bg_max_ratio > 0:
-        old_n = len(train_items)
-        train_items = downsample_bg(train_items, max_ratio=args.bg_max_ratio, seed=args.seed)
-        logger.info(f"Downsample bg: {old_n} -> {len(train_items)}")   
+#     # Load data
+#     train_items, val_items, test_items = load_data(
+#         args.data_path, args.t_win, args.stride, args.val_fraction,
+#         args.test_datasets, args.seed
+#     )
+#     if args.bg_max_ratio > 0:
+#         old_n = len(train_items)
+#         train_items = downsample_bg(train_items, max_ratio=args.bg_max_ratio, seed=args.seed)
+#         logger.info(f"Downsample bg: {old_n} -> {len(train_items)}")   
 
-    for name, items in [('Train', train_items), ('Val', val_items), ('Test', test_items)]:
-        cnt = Counter([it[-1] for it in items])
-        tot = sum(cnt.values()) or 1
-        bgp = 100.0 * cnt.get(0, 0) / tot
-        logger.info(f'{name} counts: {dict(cnt)} | bg%={bgp:.1f}') 
-    # ---------------------------------------------------------
-    # ➊  Datasets con soporte de cache en RAM
-    # ---------------------------------------------------------
-    train_dataset = PSKUSDataset(
-        args.data_path, train_items, use_z=args.use_z,
-        augment_minority=args.augment_minority,
-        cache_mode=args.cache_mode,            # <-- NUEVO
-        max_cache_gb=args.max_cache_gb         # <-- NUEVO
-    )
-    val_dataset = PSKUSDataset(
-        args.data_path, val_items, use_z=args.use_z, augment_minority=False,
-        cache_mode='lazy' if args.cache_mode == 'all' else args.cache_mode,
-        max_cache_gb=args.max_cache_gb
-    )
-    test_dataset = PSKUSDataset(
-        args.data_path, test_items, use_z=args.use_z, augment_minority=False,
-        cache_mode='lazy' if args.cache_mode == 'all' else args.cache_mode,
-        max_cache_gb=args.max_cache_gb
-    )
+#     for name, items in [('Train', train_items), ('Val', val_items), ('Test', test_items)]:
+#         cnt = Counter([it[-1] for it in items])
+#         tot = sum(cnt.values()) or 1
+#         bgp = 100.0 * cnt.get(0, 0) / tot
+#         logger.info(f'{name} counts: {dict(cnt)} | bg%={bgp:.1f}') 
+#     # ---------------------------------------------------------
+#     # ➊  Datasets con soporte de cache en RAM
+#     # ---------------------------------------------------------
+#     train_dataset = PSKUSDataset(
+#         args.data_path, train_items, use_z=args.use_z,
+#         augment_minority=args.augment_minority,
+#         cache_mode=args.cache_mode,            # <-- NUEVO
+#         max_cache_gb=args.max_cache_gb         # <-- NUEVO
+#     )
+#     val_dataset = PSKUSDataset(
+#         args.data_path, val_items, use_z=args.use_z, augment_minority=False,
+#         cache_mode='lazy' if args.cache_mode == 'all' else args.cache_mode,
+#         max_cache_gb=args.max_cache_gb
+#     )
+#     test_dataset = PSKUSDataset(
+#         args.data_path, test_items, use_z=args.use_z, augment_minority=False,
+#         cache_mode='lazy' if args.cache_mode == 'all' else args.cache_mode,
+#         max_cache_gb=args.max_cache_gb
+#     )
 
-    # ---------------------------------------------------------
-    # ➋  Sampler / Shuffle
-    # ---------------------------------------------------------
-    train_labels = [it[-1] for it in train_items]
-    if args.sampling_strategy != 'none':
-        sampler       = create_balanced_sampler(train_labels, args.sampling_strategy)
-        shuffle_train = False
-    else:
-        sampler       = None
-        shuffle_train = True
+#     # ---------------------------------------------------------
+#     # ➋  Sampler / Shuffle
+#     # ---------------------------------------------------------
+#     train_labels = [it[-1] for it in train_items]
+#     if args.sampling_strategy != 'none':
+#         sampler       = create_balanced_sampler(train_labels, args.sampling_strategy)
+#         shuffle_train = False
+#     else:
+#         sampler       = None
+#         shuffle_train = True
 
-    # ---------------------------------------------------------
-    # ➌  DataLoaders
-    # ---------------------------------------------------------
-    train_loader = DataLoader(
-        train_dataset,
-        shuffle = shuffle_train,
-        sampler = sampler,
-        **loader_kwargs
-    )
+#     # ---------------------------------------------------------
+#     # ➌  DataLoaders
+#     # ---------------------------------------------------------
+#     train_loader = DataLoader(
+#         train_dataset,
+#         shuffle = shuffle_train,
+#         sampler = sampler,
+#         **loader_kwargs
+#     )
 
-    # Para val / test no usamos drop_last
-    val_loader  = DataLoader(
-        val_dataset,
-        shuffle = False,
-        drop_last = False,
-        **{k: v for k, v in loader_kwargs.items() if k != 'drop_last'}
-    )
-    test_loader = DataLoader(
-        test_dataset,
-        shuffle = False,
-        drop_last = False,
-        **{k: v for k, v in loader_kwargs.items() if k != 'drop_last'}
-    )
+#     # Para val / test no usamos drop_last
+#     val_loader  = DataLoader(
+#         val_dataset,
+#         shuffle = False,
+#         drop_last = False,
+#         **{k: v for k, v in loader_kwargs.items() if k != 'drop_last'}
+#     )
+#     test_loader = DataLoader(
+#         test_dataset,
+#         shuffle = False,
+#         drop_last = False,
+#         **{k: v for k, v in loader_kwargs.items() if k != 'drop_last'}
+#     )
 
-    # Build model
-    model_config = {
-        'dropout': args.dropout,
-        'use_class_attention': args.use_class_attention
-    }
-    model = build_model(args.num_classes, args.in_channels, device, model_config)
-    logger.info(f'Model parameters: {sum(p.numel() for p in model.parameters()):,}')
+#     # Build model
+#     model_config = {
+#         'dropout': args.dropout,
+#         'use_class_attention': args.use_class_attention
+#     }
+#     model = build_model(args.num_classes, args.in_channels, device, model_config)
+#     logger.info(f'Model parameters: {sum(p.numel() for p in model.parameters()):,}')
     
-    # Create loss function with de-emphasis on class 0
-    class_counts = Counter(train_labels)
-    samples_per_class = [class_counts.get(i, 1) for i in range(args.num_classes)]
+#     # Create loss function with de-emphasis on class 0
+#     class_counts = Counter(train_labels)
+#     samples_per_class = [class_counts.get(i, 1) for i in range(args.num_classes)]
 
-    # Usa un peso bajo para la clase 0 (bg). Si no agregas el flag (1a),
-    # puedes dejar 0.1 fijo aquí.
-    bg_weight = getattr(args, 'bg_weight', 0.1)
-    base_alpha = torch.tensor([bg_weight] + [1.0]*(args.num_classes-1),
-                            dtype=torch.float32, device=device)
+#     # Usa un peso bajo para la clase 0 (bg). Si no agregas el flag (1a),
+#     # puedes dejar 0.1 fijo aquí.
+#     bg_weight = getattr(args, 'bg_weight', 0.1)
+#     base_alpha = torch.tensor([bg_weight] + [1.0]*(args.num_classes-1),
+#                             dtype=torch.float32, device=device)
 
-    if args.loss_type == 'focal':
-        criterion = FocalLoss(alpha=base_alpha, gamma=args.focal_gamma)
+#     if args.loss_type == 'focal':
+#         criterion = FocalLoss(alpha=base_alpha, gamma=args.focal_gamma)
 
-    elif args.loss_type == 'class_balanced':
-        cb = ClassBalancedLoss(samples_per_class=samples_per_class,
-                            beta=args.cb_beta, gamma=args.focal_gamma,
-                            loss_type='focal')
-        # combina pesos CB con el castigo a la clase 0
-        cb.weights = (cb.weights.to(device) * base_alpha).float()
-        criterion = cb
-    else:
-        criterion = nn.CrossEntropyLoss(weight=base_alpha)
+#     elif args.loss_type == 'class_balanced':
+#         cb = ClassBalancedLoss(samples_per_class=samples_per_class,
+#                             beta=args.cb_beta, gamma=args.focal_gamma,
+#                             loss_type='focal')
+#         # combina pesos CB con el castigo a la clase 0
+#         cb.weights = (cb.weights.to(device) * base_alpha).float()
+#         criterion = cb
+#     else:
+#         criterion = nn.CrossEntropyLoss(weight=base_alpha)
 
-    logger.info(f"Using {args.loss_type} loss with class distribution: {dict(class_counts)} "
-                f"| bg_weight={float(base_alpha[0]):.3f}")
-    # Optimizer with different learning rates for different parts
-    param_groups = [
-        {'params': [p for n, p in model.named_parameters() if 'classifier' in n], 'lr': args.lr * 2},
-        {'params': [p for n, p in model.named_parameters() if 'classifier' not in n], 'lr': args.lr}
-    ]
-    optimizer = torch.optim.AdamW(param_groups, weight_decay=args.weight_decay)
+#     logger.info(f"Using {args.loss_type} loss with class distribution: {dict(class_counts)} "
+#                 f"| bg_weight={float(base_alpha[0]):.3f}")
+#     # Optimizer with different learning rates for different parts
+#     param_groups = [
+#         {'params': [p for n, p in model.named_parameters() if 'classifier' in n], 'lr': args.lr * 2},
+#         {'params': [p for n, p in model.named_parameters() if 'classifier' not in n], 'lr': args.lr}
+#     ]
+#     optimizer = torch.optim.AdamW(param_groups, weight_decay=args.weight_decay)
     
-    # Scheduler
-    if args.scheduler == 'cosine':
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs, eta_min=1e-6)
-    elif args.scheduler == 'step':
-        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.5)
-    else:  # plateau
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', patience=10, factor=0.5)
+#     # Scheduler
+#     if args.scheduler == 'cosine':
+#         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs, eta_min=1e-6)
+#     elif args.scheduler == 'step':
+#         scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.5)
+#     else:  # plateau
+#         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', patience=10, factor=0.5)
     
-    enabled_amp = args.amp and (device.type == 'cuda')
-    scaler = torch.cuda.amp.GradScaler(enabled=enabled_amp)
+#     enabled_amp = args.amp and (device.type == 'cuda')
+#     scaler = torch.cuda.amp.GradScaler(enabled=enabled_amp)
 
-    # Training loop with early stopping
-    best_val_f1 = 0.0
-    early_stopping_counter = 0
-    metrics_history = []
+#     # Training loop with early stopping
+#     best_val_f1 = 0.0
+#     early_stopping_counter = 0
+#     metrics_history = []
     
-    logger.info(f"Starting training for {args.epochs} epochs...")
+#     logger.info(f"Starting training for {args.epochs} epochs...")
     
-    for epoch in range(1, args.epochs + 1):
-        # Train
-        #train_metrics = train_one_epoch(
-        #    model, train_loader, criterion, optimizer, device, epoch, args.log_interval
-        #)
-        train_metrics = train_one_epoch(
-            model, train_loader, criterion, optimizer, device, epoch, args.log_interval,
-            scaler=scaler, enabled_amp=enabled_amp
-        )
-        # Validate
-        val_metrics = evaluate(model, val_loader, criterion, device, args.num_classes)
+#     for epoch in range(1, args.epochs + 1):
+#         # Train
+#         #train_metrics = train_one_epoch(
+#         #    model, train_loader, criterion, optimizer, device, epoch, args.log_interval
+#         #)
+#         # train_metrics = train_one_epoch(
+#         #     model, train_loader, criterion, optimizer, device, epoch, args.log_interval,
+#         #     scaler=scaler, enabled_amp=enabled_amp
+#         # )
+#         train_metrics = train_one_epoch(
+#             model, train_loader, criterion, optimizer, device, epoch, args.log_interval,
+#             scaler=global_scaler, enabled_amp=enabled_amp, amp_dtype=amp_dtype
+#         )
+#         # Validate
+#         val_metrics = evaluate(model, val_loader, criterion, device, args.num_classes, enabled_amp=enabled_amp, amp_dtype=amp_dtype)
         
-        # Update scheduler
-        if args.scheduler == 'plateau':
-            scheduler.step(val_metrics['f1_macro'])
-        else:
-            scheduler.step()
+#         # Update scheduler
+#         if args.scheduler == 'plateau':
+#             scheduler.step(val_metrics['f1_macro'])
+#         else:
+#             scheduler.step()
         
-        # Log metrics
-        current_lr = optimizer.param_groups[0]['lr']
-        epoch_metrics = {
-            'epoch': epoch,
-            'train_loss': train_metrics['loss'],
-            'train_acc': train_metrics['accuracy'],
-            'train_time': train_metrics['time'],
-            'val_loss': val_metrics['loss'],
-            'val_acc': val_metrics['accuracy'],
-            'val_f1_macro': val_metrics['f1_macro'],
-            'val_f1_weighted': val_metrics['f1_weighted'],
-            'lr': current_lr
-        }
+#         # Log metrics
+#         current_lr = optimizer.param_groups[0]['lr']
+#         epoch_metrics = {
+#             'epoch': epoch,
+#             'train_loss': train_metrics['loss'],
+#             'train_acc': train_metrics['accuracy'],
+#             'train_time': train_metrics['time'],
+#             'val_loss': val_metrics['loss'],
+#             'val_acc': val_metrics['accuracy'],
+#             'val_f1_macro': val_metrics['f1_macro'],
+#             'val_f1_weighted': val_metrics['f1_weighted'],
+#             'lr': current_lr
+#         }
         
-        metrics_history.append(epoch_metrics)
+#         metrics_history.append(epoch_metrics)
         
-        # Detailed logging
-        # logger.info(f'Epoch {epoch:03d} | '
-        #            f'Train: {train_metrics["loss"]:.4f}/{train_metrics["accuracy"]:.3f} | '
-        #            f'Val: {val_metrics["loss"]:.4f}/{val_metrics["accuracy"]:.3f} | '
-        #            f'F1: {val_metrics["f1_macro"]:.4f} | LR: {current_lr:.2e}')
+#         # Detailed logging
+#         # logger.info(f'Epoch {epoch:03d} | '
+#         #            f'Train: {train_metrics["loss"]:.4f}/{train_metrics["accuracy"]:.3f} | '
+#         #            f'Val: {val_metrics["loss"]:.4f}/{val_metrics["accuracy"]:.3f} | '
+#         #            f'F1: {val_metrics["f1_macro"]:.4f} | LR: {current_lr:.2e}')
         
-        logger.info(
-            f'Epoch {epoch:03d} | '
-            f'Train: {train_metrics["loss"]:.4f}/{train_metrics["accuracy"]:.3f} | '
-            f'Val: {val_metrics["loss"]:.4f}/{val_metrics["accuracy"]:.3f} | '
-            f'F1: {val_metrics["f1_macro"]:.4f} | '
-            f'Acc(no-bg): {val_metrics.get("acc_no_bg",0):.3f} | '
-            f'bg_ratio={val_metrics.get("bg_ratio",0):.2f} | '
-            f'LR: {current_lr:.2e}'
-        )
-        # Log per-class metrics
-        logger.info(f'Val per-class F1: {val_metrics["f1_per_class"]}')
+#         logger.info(
+#             f'Epoch {epoch:03d} | '
+#             f'Train: {train_metrics["loss"]:.4f}/{train_metrics["accuracy"]:.3f} | '
+#             f'Val: {val_metrics["loss"]:.4f}/{val_metrics["accuracy"]:.3f} | '
+#             f'F1: {val_metrics["f1_macro"]:.4f} | '
+#             f'Acc(no-bg): {val_metrics.get("acc_no_bg",0):.3f} | '
+#             f'bg_ratio={val_metrics.get("bg_ratio",0):.2f} | '
+#             f'LR: {current_lr:.2e}'
+#         )
+#         # Log per-class metrics
+#         logger.info(f'Val per-class F1: {val_metrics["f1_per_class"]}')
         
-        # Wandb logging
-        if args.use_wandb:
-            log_dict = epoch_metrics.copy()
-            log_dict.update({f'val_f1_class_{k}': v for k, v in val_metrics['f1_per_class'].items()})
-            log_dict.update({f'val_acc_class_{k}': v for k, v in val_metrics['class_accuracies'].items()})
-            wandb.log(log_dict)
+#         # Wandb logging
+#         if args.use_wandb:
+#             log_dict = epoch_metrics.copy()
+#             log_dict.update({f'val_f1_class_{k}': v for k, v in val_metrics['f1_per_class'].items()})
+#             log_dict.update({f'val_acc_class_{k}': v for k, v in val_metrics['class_accuracies'].items()})
+#             wandb.log(log_dict)
         
-        # Save best model and early stopping
-        if val_metrics['f1_macro'] > best_val_f1:
-            best_val_f1 = val_metrics['f1_macro']
-            early_stopping_counter = 0
+#         # Save best model and early stopping
+#         if val_metrics['f1_macro'] > best_val_f1:
+#             best_val_f1 = val_metrics['f1_macro']
+#             early_stopping_counter = 0
             
-            torch.save({
-                'epoch': epoch,
-                'model_state_dict': model.state_dict(),
-                'optimizer_state_dict': optimizer.state_dict(),
-                'scheduler_state_dict': scheduler.state_dict(),
-                'best_val_f1': best_val_f1,
-                'val_metrics': val_metrics,
-                'args': vars(args)
-            }, os.path.join(args.save_dir, 'best_model.pt'))
+#             torch.save({
+#                 'epoch': epoch,
+#                 'model_state_dict': model.state_dict(),
+#                 'optimizer_state_dict': optimizer.state_dict(),
+#                 'scheduler_state_dict': scheduler.state_dict(),
+#                 'best_val_f1': best_val_f1,
+#                 'val_metrics': val_metrics,
+#                 'args': vars(args)
+#             }, os.path.join(args.save_dir, 'best_model.pt'))
             
-            logger.info(f'New best model saved with F1: {best_val_f1:.4f}')
-        else:
-            early_stopping_counter += 1
+#             logger.info(f'New best model saved with F1: {best_val_f1:.4f}')
+#         else:
+#             early_stopping_counter += 1
         
-        # Early stopping
-        if early_stopping_counter >= args.early_stopping_patience:
-            logger.info(f'Early stopping triggered after {epoch} epochs')
-            break
+#         # Early stopping
+#         if early_stopping_counter >= args.early_stopping_patience:
+#             logger.info(f'Early stopping triggered after {epoch} epochs')
+#             break
     
-    # Load best model for final evaluation
-    checkpoint = torch.load(os.path.join(args.save_dir, 'best_model.pt'))
-    model.load_state_dict(checkpoint['model_state_dict'])
+#     # Load best model for final evaluation
+#     checkpoint = torch.load(os.path.join(args.save_dir, 'best_model.pt'))
+#     model.load_state_dict(checkpoint['model_state_dict'])
     
-    # Final test evaluation
-    logger.info("Evaluating on test set...")
-    test_metrics = evaluate(model, test_loader, criterion, device, args.num_classes)
+#     # Final test evaluation
+#     logger.info("Evaluating on test set...")
+#     test_metrics = evaluate(model, test_loader, criterion, device, args.num_classes)
     
-    logger.info(f'Test Results:')
-    logger.info(f'  Loss: {test_metrics["loss"]:.4f}')
-    logger.info(f'  Accuracy: {test_metrics["accuracy"]:.3f}')
-    logger.info(f'  F1 (Macro): {test_metrics["f1_macro"]:.4f}')
-    logger.info(f'  F1 (Weighted): {test_metrics["f1_weighted"]:.4f}')
-    logger.info(f'  Per-class F1: {test_metrics["f1_per_class"]}')
-    logger.info(f'  Per-class Accuracy: {test_metrics["class_accuracies"]}')
+#     logger.info(f'Test Results:')
+#     logger.info(f'  Loss: {test_metrics["loss"]:.4f}')
+#     logger.info(f'  Accuracy: {test_metrics["accuracy"]:.3f}')
+#     logger.info(f'  F1 (Macro): {test_metrics["f1_macro"]:.4f}')
+#     logger.info(f'  F1 (Weighted): {test_metrics["f1_weighted"]:.4f}')
+#     logger.info(f'  Per-class F1: {test_metrics["f1_per_class"]}')
+#     logger.info(f'  Per-class Accuracy: {test_metrics["class_accuracies"]}')
     
-    # Save comprehensive results
-    final_metrics = {
-        'best_val_f1': best_val_f1,
-        'test_metrics': test_metrics,
-        'total_epochs': epoch,
-        'early_stopped': early_stopping_counter >= args.early_stopping_patience,
-        'class_distribution': dict(Counter(train_labels)),
-        'history': metrics_history,
-        'args': vars(args)
-    }
+#     # Save comprehensive results
+#     final_metrics = {
+#         'best_val_f1': best_val_f1,
+#         'test_metrics': test_metrics,
+#         'total_epochs': epoch,
+#         'early_stopped': early_stopping_counter >= args.early_stopping_patience,
+#         'class_distribution': dict(Counter(train_labels)),
+#         'history': metrics_history,
+#         'args': vars(args)
+#     }
     
-    with open(os.path.join(args.save_dir, 'metrics.json'), 'w') as f:
-        json.dump(final_metrics, f, indent=2)
+#     with open(os.path.join(args.save_dir, 'metrics.json'), 'w') as f:
+#         json.dump(final_metrics, f, indent=2)
     
-    # Generate plots
-    if args.plot_local:
-        plot_training_curves(metrics_history, os.path.join(args.save_dir, 'plots'))
-        plot_confusion_matrix(
-            test_metrics['confusion_matrix'], 
-            [f'Class {i}' for i in range(args.num_classes)],
-            os.path.join(args.save_dir, 'plots')
-        )
+#     # Generate plots
+#     if args.plot_local:
+#         plot_training_curves(metrics_history, os.path.join(args.save_dir, 'plots'))
+#         plot_confusion_matrix(
+#             test_metrics['confusion_matrix'], 
+#             [f'Class {i}' for i in range(args.num_classes)],
+#             os.path.join(args.save_dir, 'plots')
+#         )
     
-    # Final wandb logging
-    if args.use_wandb:
-        wandb.log({
-            "test_f1_macro": test_metrics['f1_macro'],
-            "test_f1_weighted": test_metrics['f1_weighted'], 
-            "test_accuracy": test_metrics['accuracy'],
-            "final_epoch": epoch
-        })
+#     # Final wandb logging
+#     if args.use_wandb:
+#         wandb.log({
+#             "test_f1_macro": test_metrics['f1_macro'],
+#             "test_f1_weighted": test_metrics['f1_weighted'], 
+#             "test_accuracy": test_metrics['accuracy'],
+#             "final_epoch": epoch
+#         })
         
-        # Upload plots if available
-        if args.plot_local:
-            wandb.log({
-                "training_curves": wandb.Image(os.path.join(args.save_dir, 'plots', 'training_curves.png')),
-                "confusion_matrix": wandb.Image(os.path.join(args.save_dir, 'plots', 'confusion_matrix.png'))
-            })
+#         # Upload plots if available
+#         if args.plot_local:
+#             wandb.log({
+#                 "training_curves": wandb.Image(os.path.join(args.save_dir, 'plots', 'training_curves.png')),
+#                 "confusion_matrix": wandb.Image(os.path.join(args.save_dir, 'plots', 'confusion_matrix.png'))
+#             })
         
-        wandb.finish()
+#         wandb.finish()
     
-    logger.info(f"Training completed. Results saved to {args.save_dir}")
-    logger.info(f"Best validation F1: {best_val_f1:.4f}")
-    logger.info(f"Final test F1: {test_metrics['f1_macro']:.4f}")
+#     logger.info(f"Training completed. Results saved to {args.save_dir}")
+#     logger.info(f"Best validation F1: {best_val_f1:.4f}")
+#     logger.info(f"Final test F1: {test_metrics['f1_macro']:.4f}")
 
 
 # ============================================================================
@@ -1940,7 +1975,7 @@ def train_binary_stage(train_items, val_bal_items, args, device):
     
     best_f1 = 0.0
     patience = 0
-    scaler = torch.cuda.amp.GradScaler(enabled=(device.type == 'cuda' and args.amp))
+    amp_dtype, enabled_amp, scaler = amp_setup(device, args.amp)
     
     for epoch in range(1, 13):  # Máx 12 epochs
         # Entrenar
@@ -1954,20 +1989,23 @@ def train_binary_stage(train_items, val_bal_items, args, device):
             target_bin = convert_labels_to_binary(target.cpu().numpy())
             target_bin = torch.tensor(target_bin, dtype=torch.float32, device=device)
             
-            optimizer.zero_grad()
+            optimizer.zero_grad(set_to_none=True)
             
-            with torch.amp.autocast('cuda', enabled=(device.type == 'cuda' and args.amp)):
+            with torch.amp.autocast('cuda', dtype=amp_dtype, enabled=enabled_amp):
                 logits = binary_model(data)
                 loss = criterion(logits, target_bin)
             
-            if args.amp and device.type == 'cuda':
+            if scaler is not None and enabled_amp and scaler.is_enabled():
                 scaler.scale(loss).backward()
+                scaler.unscale_(optimizer)
+                torch.nn.utils.clip_grad_norm_(binary_model.parameters(), max_norm=1.0)
                 scaler.step(optimizer)
                 scaler.update()
             else:
                 loss.backward()
+                torch.nn.utils.clip_grad_norm_(binary_model.parameters(), max_norm=1.0)
                 optimizer.step()
-            
+                
             train_loss += loss.item()
             
             # Accuracy
@@ -1984,8 +2022,13 @@ def train_binary_stage(train_items, val_bal_items, args, device):
         # Validar y encontrar umbral óptimo
         threshold, f1_bin = find_optimal_threshold(binary_model, val_loader, device, 'f1')
         
-        logger.info(f'Binary Epoch {epoch}: train_loss={train_loss/len(train_loader):.3f}, '
-                   f'train_acc={train_acc:.3f}, val_f1={f1_bin:.3f}, threshold={threshold:.3f}')
+        logger.info(
+        f'Binary Epoch {epoch}: '
+        f'train_loss={train_loss/len(train_loader):.3f}, '
+        f'train_acc={train_acc:.3f}, '
+        f'val_f1={f1_bin:.3f}, '
+        f'threshold={threshold:.3f}'
+    )
         
         scheduler.step(f1_bin)
         
@@ -2079,7 +2122,7 @@ def train_multiclass_stage(train_items, val_bal_items, args, device):
     
     best_f1 = 0.0
     patience = 0
-    scaler = torch.cuda.amp.GradScaler(enabled=(device.type == 'cuda' and args.amp))
+    amp_dtype, enabled_amp, scaler = amp_setup(device, args.amp)
     
     for epoch in range(1, 21):  # Máx 20 epochs
         # Entrenar
@@ -2094,18 +2137,21 @@ def train_multiclass_stage(train_items, val_bal_items, args, device):
             # Convertir targets originales (1-6) a 0-5 para multiclase
             target = torch.tensor([t-1 for t in target_orig], dtype=torch.long, device=device)
             
-            optimizer.zero_grad()
+            optimizer.zero_grad(set_to_none=True)
             
-            with torch.amp.autocast('cuda', enabled=(device.type == 'cuda' and args.amp)):
+            with torch.amp.autocast('cuda', dtype=amp_dtype, enabled=enabled_amp):
                 logits = multiclass_model(data, apply_adjustment=True)
                 loss = criterion(logits, target)
             
-            if args.amp and device.type == 'cuda':
+            if scaler is not None and enabled_amp and scaler.is_enabled():
                 scaler.scale(loss).backward()
+                scaler.unscale_(optimizer)
+                torch.nn.utils.clip_grad_norm_(multiclass_model.parameters(), max_norm=1.0)
                 scaler.step(optimizer)
                 scaler.update()
             else:
                 loss.backward()
+                torch.nn.utils.clip_grad_norm_(multiclass_model.parameters(), max_norm=1.0)
                 optimizer.step()
             
             train_loss += loss.item()
@@ -2132,7 +2178,7 @@ def train_multiclass_stage(train_items, val_bal_items, args, device):
                 data = data.to(device, non_blocking=True)
                 target = torch.tensor([t-1 for t in target_orig], dtype=torch.long, device=device)
                 
-                with torch.amp.autocast('cuda', enabled=(device.type == 'cuda' and args.amp)):
+                with torch.amp.autocast('cuda', dtype=amp_dtype, enabled=enabled_amp):
                     logits = multiclass_model(data, apply_adjustment=False)
                     loss = criterion(logits, target)
                 
@@ -2340,6 +2386,7 @@ def main():
     os.makedirs(args.save_dir, exist_ok=True)
     os.makedirs(os.path.join(args.save_dir, 'monitoring'), exist_ok=True)
     
+    amp_dtype, enabled_amp, global_scaler = amp_setup(device, args.amp)
     # Initialize wandb if requested
     if args.use_wandb:
         if not WANDB_AVAILABLE:

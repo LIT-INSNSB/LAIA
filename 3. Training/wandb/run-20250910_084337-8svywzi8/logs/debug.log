@@ -1,0 +1,23 @@
+2025-09-10 08:43:37,428 INFO    MainThread:14003 [wandb_setup.py:_flush():81] Current SDK version is 0.21.3
+2025-09-10 08:43:37,428 INFO    MainThread:14003 [wandb_setup.py:_flush():81] Configure stats pid to 14003
+2025-09-10 08:43:37,428 INFO    MainThread:14003 [wandb_setup.py:_flush():81] Loading settings from /root/.config/wandb/settings
+2025-09-10 08:43:37,428 INFO    MainThread:14003 [wandb_setup.py:_flush():81] Loading settings from /root/repositories/LAIA/3. Training/wandb/settings
+2025-09-10 08:43:37,428 INFO    MainThread:14003 [wandb_setup.py:_flush():81] Loading settings from environment variables
+2025-09-10 08:43:37,428 INFO    MainThread:14003 [wandb_init.py:setup_run_log_directory():686] Logging user logs to /root/repositories/LAIA/3. Training/wandb/run-20250910_084337-8svywzi8/logs/debug.log
+2025-09-10 08:43:37,428 INFO    MainThread:14003 [wandb_init.py:setup_run_log_directory():687] Logging internal logs to /root/repositories/LAIA/3. Training/wandb/run-20250910_084337-8svywzi8/logs/debug-internal.log
+2025-09-10 08:43:37,428 INFO    MainThread:14003 [wandb_init.py:init():813] calling init triggers
+2025-09-10 08:43:37,428 INFO    MainThread:14003 [wandb_init.py:init():818] wandb.init called with sweep_config: {}
+config: {'data_path': '../prepared/h5/PSKUS-v2.h5', 't_win': 64, 'stride': 8, 'val_fraction': 0.18, 'test_datasets': [], 'num_classes': 7, 'in_channels': 2, 'use_z': False, 'dropout': 0.3, 'use_class_attention': False, 'batch_size': 64, 'epochs': 50, 'lr': 0.0002, 'weight_decay': 0.001, 'early_stopping_patience': 15, 'scheduler': 'plateau', 'two_stage': True, 'val_bg_ratio': 0.3, 'tau': 1.0, 'amp': True, 'num_workers': 12, 'seed': 123, 'device': 'cuda', 'log_interval': 100, 'save_dir': './experiments/run_006', 'plot_local': True, 'use_wandb': True, 'project_name': 'stgcn-gesture', 'run_name': 'run_006_bs64_bg20', 'bg_max_ratio': 0.2, 'sampling_strategy': 'none', 'loss_type': 'focal', 'focal_gamma': 2.0, 'cb_beta': 0.9999, 'bg_weight': 0.1, 'augment_minority': False, 'cache_mode': 'lazy', 'max_cache_gb': 6.0, 'pin_memory': 1, 'persistent_workers': 1, 'prefetch_factor': 8, '_wandb': {}}
+2025-09-10 08:43:37,429 INFO    MainThread:14003 [wandb_init.py:init():854] starting backend
+2025-09-10 08:43:37,633 INFO    MainThread:14003 [wandb_init.py:init():857] sending inform_init request
+2025-09-10 08:43:37,635 INFO    MainThread:14003 [wandb_init.py:init():865] backend started and connected
+2025-09-10 08:43:37,636 INFO    MainThread:14003 [wandb_init.py:init():936] updated telemetry
+2025-09-10 08:43:37,639 INFO    MainThread:14003 [wandb_init.py:init():960] communicating run to backend with 90.0 second timeout
+2025-09-10 08:43:37,960 INFO    MainThread:14003 [wandb_init.py:init():1011] starting run threads in backend
+2025-09-10 08:43:38,076 INFO    MainThread:14003 [wandb_run.py:_console_start():2494] atexit reg
+2025-09-10 08:43:38,077 INFO    MainThread:14003 [wandb_run.py:_redirect():2342] redirect: wrap_raw
+2025-09-10 08:43:38,077 INFO    MainThread:14003 [wandb_run.py:_redirect():2411] Wrapping output streams.
+2025-09-10 08:43:38,078 INFO    MainThread:14003 [wandb_run.py:_redirect():2434] Redirects installed.
+2025-09-10 08:43:38,079 INFO    MainThread:14003 [wandb_init.py:init():1057] run started, returning control to user process
+2025-09-10 12:03:38,286 INFO    wandb-AsyncioManager-main:14003 [service_client.py:_forward_responses():84] Reached EOF.
+2025-09-10 12:03:38,286 INFO    wandb-AsyncioManager-main:14003 [mailbox.py:close():137] Closing mailbox, abandoning 1 handles.
